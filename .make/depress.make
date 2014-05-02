@@ -1,5 +1,8 @@
 api = 2
 core = 7.x
+projects[drupal][type] = core
+projects[drupal][version] = 7.27
+
 ;includes[] = depress.*.make
 
 ; demonstratie theme
@@ -19,4 +22,5 @@ projects[ember][download][branch] = "7.x-2.x"
 ; admin_menu module 
 ; substitute for 'overlay', 'toolbar'
 ; is this needed anymore, if using ember?
-projects[] = admin_menu
+projects[admin_menu][type] = "module"
+projects[admin_menu][subdir] = "contrib"
