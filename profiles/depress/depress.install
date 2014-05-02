@@ -12,6 +12,15 @@
  * @see system_install()
  */
 function depress_install() {
+  // Enable new/contrib default & admin themes.
+  theme_enable(array('demonstratie_core', 'ember'));
+  variable_set('theme_default', 'demonstratie_core');
+  variable_set('admin_theme', 'ember');
+  // Don't use admin theme when editing nodes.
+  variable_set('node_admin_theme', '0');
+  // Disable bartik & seven.
+  theme_disable(array('bartik', 'seven'));
+
   // Add text formats.
   $filtered_html_format = array(
     'format' => 'filtered_html',
@@ -70,7 +79,7 @@ function depress_install() {
 
   // Enable some standard blocks.
   $default_theme = variable_get('theme_default', 'bartik');
-  $admin_theme = 'seven';
+  $admin_theme = 'ember';
   $blocks = array(
     array(
       'module' => 'system',
@@ -390,16 +399,66 @@ function depress_install() {
 
   // Update the menu router information.
   menu_rebuild();
+}
 
-  // Enable the admin theme.
+/**
+ * Implements hook_install_tasks_alter().
+ */
+function depress_install_tasks_alter(&$tasks, $install_state) {
+  global $install_state;
+
+  // skip profile selection step
+  $tasks['install_select_profile']['display'] = false;
+
+  // skip language selection
+  $tasks['install_select_locale']['display'] = false;
+  $tasks['install_select_locale']['run'] = INSTALL_TASK_SKIP;
+  $install_state['parameters']['locale'] = 'en';
+
+  // override 'install_finished' task
+  $tasks['install_finished']['function'] = 'depress_install_finished';
+}
+
+/**
+ * Override of install_finished task
+ */
+function depress_install_finished(&$install_state) {
+  drupal_flush_all_caches();
+
+  variable_set('install_profile', drupal_get_profile());
+
   db_update('system')
-    ->fields(array('status' => 1))
-    ->condition('type', 'theme')
-    ->condition('name', 'seven')
+    ->fields(array('weight' => 1000))
+    ->condition('type', 'module')
+    ->condition('name', drupal_get_profile())
     ->execute();
-    
-  // Set admin theme to Ember.
-  variable_set('admin_theme', 'ember');//variable_set('admin_theme', 'seven');
-  // Use admin theme when editing nodes.
-  variable_set('node_admin_theme', '1');
+
+  // cache a fully-built schema
+  drupal_get_schema(null, true);
+
+  // run cron
+  drupal_cron_run();
+
+  // clear + rebuild features
+  features_get_info(null, null, true);
+  features_rebuild();
+  features_revert();
+
+  // remove all non-error msgs
+  //$messages = array('completed', 'status', 'warning');
+  foreach (['completed', 'status', 'warning'] as $msg) {
+    drupal_get_messages($msg, true);
+  }
+
+  $drushing = drupal_is_cli();
+
+  // dis update mgr (`drush site-install` enables it by default)
+  if ($drushing && module_exists('update')) {
+    module_disable(array('update'), true);
+  }
+
+  // say something nice to drush users
+  if ($drushing) {
+    drupal_set_message(t('Thank you for installing Depress!'), 'status');
+  }
 }
