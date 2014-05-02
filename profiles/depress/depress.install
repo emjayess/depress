@@ -397,6 +397,9 @@ function depress_install() {
     ->condition('type', 'theme')
     ->condition('name', 'seven')
     ->execute();
-  variable_set('admin_theme', 'seven');
+    
+  // Set admin theme to Ember.
+  variable_set('admin_theme', 'ember');//variable_set('admin_theme', 'seven');
+  // Use admin theme when editing nodes.
   variable_set('node_admin_theme', '1');
 }
